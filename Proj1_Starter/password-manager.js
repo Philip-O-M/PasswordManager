@@ -1,50 +1,127 @@
 "use strict";
 
-/********* External Imports ********/
+const crypto = require('crypto').webcrypto;
 
-const { stringToBuffer, bufferToString, encodeBuffer, decodeBuffer, getRandomBytes } = require("./lib");
-const { subtle } = require('crypto').webcrypto;
+// Constants for encryption, HMAC, and key derivation
+const PBKDF2_ITERATIONS = 100000;
+const AES_KEY_SIZE = 256; // AES-GCM key size in bits
+const HMAC_KEY_SIZE = 256; // HMAC key size in bits
+const SALT_SIZE = 16; // Salt size in bytes
+const IV_SIZE = 12; // AES-GCM IV size in bytes
 
-/********* Constants ********/
-
-const PBKDF2_ITERATIONS = 100000; // number of iterations for PBKDF2 algorithm
-const MAX_PASSWORD_LENGTH = 64;   // we can assume no password is longer than this many characters
-
-/********* Implementation ********/
 class Keychain {
-  /**
-   * Initializes the keychain using the provided information. Note that external
-   * users should likely never invoke the constructor directly and instead use
-   * either Keychain.init or Keychain.load. 
-   * Arguments:
-   *  You may design the constructor with any parameters you would like. 
-   * Return Type: void
-   */
-  constructor() {
-    this.data = { 
-      /* Store member variables that you intend to be public here
-         (i.e. information that will not compromise security if an adversary sees) */
-    };
-    this.secrets = {
-      /* Store member variables that you intend to be private here
-         (information that an adversary should NOT see). */
-    };
 
-    throw "Not Implemented!";
-  };
+    constructor() {
+        this.data = {}; // Store non-sensitive information, like metadata.
+        this.secrets = {}; // Store sensitive information, like keys.
+        this.kvs = {}; // Stores encrypted key-value pairs.
+    }
 
-  /** 
-    * Creates an empty keychain with the given password.
-    *
-    * Arguments:
-    *   password: string
-    * Return Type: void
-    */
-  static async init(password) {
-    throw "Not Implemented!";
-  }
+    // Derive master key using PBKDF2 and a salt, and create subkeys for HMAC and AES
+    static async deriveMasterKey(password, salt) {
+        const encoder = new TextEncoder();
+        const passwordKey = await crypto.subtle.importKey(
+            "raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]
+        );
+        const derivedBits = await crypto.subtle.deriveBits(
+            { name: "PBKDF2", salt: salt, iterations: PBKDF2_ITERATIONS, hash: "SHA-256" },
+            passwordKey,
+            AES_KEY_SIZE + HMAC_KEY_SIZE
+        );
+        return derivedBits;
+    }
 
-  /**
+    // Generate HMAC and AES keys from derived bits
+    static async generateSubkeys(derivedBits) {
+        const hmacKeyBits = derivedBits.slice(0, HMAC_KEY_SIZE / 8);
+        const aesKeyBits = derivedBits.slice(HMAC_KEY_SIZE / 8);
+        const hmacKey = await crypto.subtle.importKey("raw", hmacKeyBits, { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
+        const aesKey = await crypto.subtle.importKey("raw", aesKeyBits, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+        return { hmacKey, aesKey };
+    }
+
+    // Initialize Keychain by deriving keys from the master password
+    static async init(password) {
+        const instance = new Keychain();
+        instance.data.salt = crypto.getRandomValues(new Uint8Array(SALT_SIZE)); // Non-sensitive metadata.
+        const derivedBits = await Keychain.deriveMasterKey(password, instance.data.salt);
+        const subkeys = await Keychain.generateSubkeys(derivedBits);
+        instance.secrets.hmacKey = subkeys.hmacKey; // Sensitive key stored in this.secrets.
+        instance.secrets.aesKey = subkeys.aesKey;   // Sensitive key stored in this.secrets.
+        return instance;
+    }
+
+    // Generate HMAC of domain
+    async hmacDomain(domain) {
+        const encoder = new TextEncoder();
+        return crypto.subtle.sign("HMAC", this.secrets.hmacKey, encoder.encode(domain));
+    }
+
+    // Encrypt password with AES-GCM
+    async encrypt(password) {
+        const iv = crypto.getRandomValues(new Uint8Array(IV_SIZE));
+        const encodedPassword = new TextEncoder().encode(password);
+        const encryptedPassword = await crypto.subtle.encrypt(
+            { name: "AES-GCM", iv: iv },
+            this.secrets.aesKey,
+            encodedPassword
+        );
+        return { iv: Array.from(iv), data: Array.from(new Uint8Array(encryptedPassword)) };
+    }
+
+    // Decrypt AES-GCM encrypted password
+    async decrypt(encrypted) {
+        const iv = new Uint8Array(encrypted.iv);
+        const encryptedData = new Uint8Array(encrypted.data);
+        const decrypted = await crypto.subtle.decrypt(
+            { name: "AES-GCM", iv: iv },
+            this.secrets.aesKey,
+            encryptedData
+        );
+        return new TextDecoder().decode(decrypted);
+    }
+
+    // Set password securely
+    async set(domain, password) {
+        const domainHash = await this.hmacDomain(domain);
+        const encryptedPassword = await this.encrypt(password);
+        this.kvs[Buffer.from(domainHash).toString('hex')] = encryptedPassword;
+    }
+
+    // Retrieve password for a given domain
+    async get(domain) {
+        const domainHash = await this.hmacDomain(domain);
+        const encryptedPassword = this.kvs[Buffer.from(domainHash).toString('hex')];
+        return encryptedPassword ? await this.decrypt(encryptedPassword) : null;
+    }
+
+    // Remove password for a domain
+    async remove(domain) {
+        const domainHash = await this.hmacDomain(domain);
+        const hashedDomain = Buffer.from(domainHash).toString('hex');
+        if (hashedDomain in this.kvs) {
+            delete this.kvs[hashedDomain];
+            return true;
+        }
+        return false;
+    }
+
+    // Generate SHA-256 checksum for integrity
+    async sha256Hash(data) {
+        const encoder = new TextEncoder();
+        const dataBuffer = encoder.encode(data);
+        const hashBuffer = await crypto.subtle.digest("SHA-256", dataBuffer);
+        return Buffer.from(hashBuffer).toString("base64");
+    }
+
+    // Serialize the key-value store with checksum
+    async dump() {
+        const kvsString = JSON.stringify({ kvs: this.kvs, salt: Array.from(this.data.salt) }); // Convert salt to an array for JSON
+        const checksum = await this.sha256Hash(kvsString);
+        return [kvsString, checksum];
+    }
+
+     /**
     * Loads the keychain state from the provided representation (repr). The
     * repr variable will contain a JSON encoded serialization of the contents
     * of the KVS (as returned by the dump function). The trustedDataCheck
@@ -61,64 +138,39 @@ class Keychain {
     *   trustedDataCheck: string
     * Return Type: Keychain
     */
-  static async load(password, repr, trustedDataCheck) {
-    throw "Not Implemented!";
-  };
+    // Load key-value store and verify integrity
+    static async load(password, serializedData, trustedChecksum) {
+        // Verify checksum
+        const actualChecksum = await Keychain.prototype.sha256Hash(serializedData);
+        if (actualChecksum !== trustedChecksum) throw new Error("Checksum mismatch");
 
-  /**
-    * Returns a JSON serialization of the contents of the keychain that can be 
-    * loaded back using the load function. The return value should consist of
-    * an array of two strings:
-    *   arr[0] = JSON encoding of password manager
-    *   arr[1] = SHA-256 checksum (as a string)
-    * As discussed in the handout, the first element of the array should contain
-    * all of the data in the password manager. The second element is a SHA-256
-    * checksum computed over the password manager to preserve integrity.
-    *
-    * Return Type: array
-    */ 
-  async dump() {
-    throw "Not Implemented!";
-  };
+        // Parse data to retrieve kvs and salt
+        const parsedData = JSON.parse(serializedData);
+        const instance = new Keychain();
 
-  /**
-    * Fetches the data (as a string) corresponding to the given domain from the KVS.
-    * If there is no entry in the KVS that matches the given domain, then return
-    * null.
-    *
-    * Arguments:
-    *   name: string
-    * Return Type: Promise<string>
-    */
-  async get(name) {
-    throw "Not Implemented!";
-  };
+        // Retrieve salt from parsed data and convert to Uint8Array
+        if (!parsedData.salt) throw new Error("Missing salt in serialized data");
+        instance.data.salt = new Uint8Array(parsedData.salt); // Ensure salt is in correct format
 
-  /** 
-  * Inserts the domain and associated data into the KVS. If the domain is
-  * already in the password manager, this method should update its value. If
-  * not, create a new entry in the password manager.
-  *
-  * Arguments:
-  *   name: string
-  *   value: string
-  * Return Type: void
-  */
-  async set(name, value) {
-    throw "Not Implemented!";
-  };
+        // Derive keys from password using the salt from parsed data
+        const derivedBits = await Keychain.deriveMasterKey(password, instance.data.salt);
+        const subkeys = await Keychain.generateSubkeys(derivedBits);
+        instance.secrets.hmacKey = subkeys.hmacKey;
+        instance.secrets.aesKey = subkeys.aesKey;
 
-  /**
-    * Removes the record with name from the password manager. Returns true
-    * if the record with the specified name is removed, false otherwise.
-    *
-    * Arguments:
-    *   name: string
-    * Return Type: Promise<boolean>
-  */
-  async remove(name) {
-    throw "Not Implemented!";
-  };
-};
+        // Attempt to decrypt data to validate password
+        try {
+            instance.kvs = parsedData.kvs; // Restore kvs only if keys are valid
+            // Optionally check if the data can be decrypted
+            for (const domain in instance.kvs) {
+                await instance.decrypt(instance.kvs[domain]); // Check decryption
+            }
+        } catch (error) {
+            throw new Error("Invalid password or corrupted data"); // Properly throw if it fails
+        }
 
-module.exports = { Keychain }
+        return instance;
+    }
+}
+
+module.exports = { Keychain };
