@@ -25,7 +25,7 @@ Begin with cloning the project to your local repository.
 Press Enter to create your local clone.
 Move to the password manager project directory, then navigate to the Front-End folder.
 
-      cd pmanager/front
+      cd pmanager/front 
 
 Install the required frontend packages used in javascript programming and Nodejs.
 
@@ -40,9 +40,10 @@ Then install the required packages
       npm i
 
 ## Performing the tests
-To run the tests, ensure you are in the folder that contains the test folder then type the command below 
-
-      npm test
+To run the tests, navigate to the starter folder as shown 
+      cd Proj1_Starter
+To run the test type the command below
+      npm run test
 
 You will see that all the 11 tests present will have passed.
 ## To run the server(backend)
