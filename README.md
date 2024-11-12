@@ -57,6 +57,9 @@ Then paste the following url in the browser
 
 ##Short Answer Questions
 
+1.
+The passwords are encrypted using AES-GCM, which is a modern and secure encryption algorithm. This ensures that the adversary cannot directly observe the plaintext passwords or their lengths; also the encryption process likely includes padding the plaintext password to a fixed block size before encryption. This ensures that the ciphertext length does not directly reveal the original password length.
+
 
 2.
 In a swap attack, the adversary is able to interchange the values corresponding to the different keys in the password manager. This means that the attacker swaps the credentials of one site with the credentials of another. For example, if the attacker controls www.evil.com, they could swap the credential with www.google.com and use the stolen credentials to access the google site.
