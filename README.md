@@ -70,7 +70,7 @@ Start the react application
 
 Then paste the following url in the browser 
 
-	http://localhost:3001/LandingPage
+	http://localhost:3001/signup
 
 ##Short Answer Questions
 
