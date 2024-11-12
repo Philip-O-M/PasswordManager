@@ -4,7 +4,7 @@ This project is licensed under the MIT license
 
 ## Introduction
 
-This is a project where i, together with my team will be implementing a password manager ensuring it passes security tests.
+This is a project where I, together with my team will be implementing a password manager ensuring it passes security tests.
 
 
 ## Getting Started
