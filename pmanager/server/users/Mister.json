@@ -1,0 +1,6 @@
+{
+  "username": "Mister",
+  "passwordHash": "$2b$10$rvrwb4vcSJH5h1vJfc6tLOsA8kga1.TAfu8EPS2.hjSuyoPv9vDyS",
+  "serializedData": "{\"kvs\":{\"09ae37356b94f01411b4848545d0b309342951ca8971a7f6a4205332329494fd\":{\"data\":[127,254,14,6,132,184,96,228,126,36,73,30,234,141,13,182,247],\"iv\":[226,64,63,25,72,195,234,62,110,64,143,148]}},\"salt\":[170,247,129,189,157,153,97,236,111,56,166,133,227,165,81,100]}",
+  "trustedChecksum": "7SJpwRYSs2+pD3vJTioSsgIQTGcw+vrdWdFOr16yiRA="
+}

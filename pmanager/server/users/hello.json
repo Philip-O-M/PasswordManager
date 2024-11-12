@@ -1,0 +1,9 @@
+{
+  "username": "hello",
+  "passwordHash": "$2b$10$tIpTv1Mf7oZM3dUhjiFUxO8v5i6LO0E881VBRpzdOso4SDy/BU8TW",
+  "serializedData": [
+    "{\"kvs\":{},\"salt\":[201,148,16,199,45,61,24,18,96,222,203,31,223,21,166,211]}",
+    "2hl90NybKmDFhDzkPzeWO3GqUxVJ99VKSe3NROOnGhA="
+  ],
+  "trustedChecksum": "uCjUj6D34qptxVAkwWACUsbuq9Qna6aXVDb4Rsme75o="
+}
