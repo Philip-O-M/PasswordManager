@@ -25,7 +25,7 @@ Begin with cloning the project to your local repository.
 Press Enter to create your local clone.
 Move to the password manager project directory, then navigate to the Front-End folder.
 
-      cd PasswordManager/front
+      cd pmanager/front
 
 Install the required frontend packages used in javascript programming and Nodejs.
 
@@ -33,27 +33,43 @@ Install the required frontend packages used in javascript programming and Nodejs
 
 Navigate to the backend directory
 
-      cd ../server
+      cd pmanager/server
 
 Then install the required packages
 
-      npm 1
+      npm i
 
 ## Performing the tests
-To run the tests, ensure you are in the folder that contains th etest folder then type the command below 
+To run the tests, ensure you are in the folder that contains the test folder then type the command below 
 
-      nmp test
+      npm test
+
 You will see that all the 11 tests present will have passed.
-To run the frontend
+## To run the server(backend)
+
+
+Navigate to the backend 
+
+	 cd pmanager/server
+
+Start the server
+
+	 npm run
+
+## To run the frontend
 
 
 Navigate to the frontend 
 
-	 cd Front-End
-	 npm run
+	 cd pmanager/front
+
+Start the react application
+
+	 npm run start
+
 Then paste the following url in the browser 
 
-	http://localhost:3000/LandingPage
+	http://localhost:3001/LandingPage
 
 ##Short Answer Questions
 
