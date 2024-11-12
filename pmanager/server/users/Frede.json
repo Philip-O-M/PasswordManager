@@ -1,0 +1,6 @@
+{
+  "username": "Frede",
+  "passwordHash": "$2b$10$CHAkRJBR4rm.DVJyRRHkke/nAxDieui566kKYQUXLrkvJlXeequcW",
+  "serializedData": "{\"kvs\":{\"4b28bcd500cfab98f62d69e874a2e8411e1d5c751200a560e32312493f4dcc87\":{\"data\":[8,211,202,122,177,136,120,80,113,142,176,196,62,208,81,217,106],\"iv\":[227,101,252,190,245,78,211,252,220,51,168,8]}},\"salt\":[212,110,212,156,214,254,240,181,38,49,13,243,146,177,73,90]}",
+  "trustedChecksum": "o8ag9Dpo9in9CVNNoN2ewfOm2eMVZY+qlaWnpdhz858="
+}

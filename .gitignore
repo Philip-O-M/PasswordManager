@@ -1,2 +1,4 @@
 node_modules/
+./pmanager/server/node_modules
+*/node_modules
 _MACOSX/
